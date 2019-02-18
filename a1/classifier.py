@@ -1,7 +1,30 @@
 import os.path
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import util
+import collections
+
+def get_all_unique_words(files):
+    ret = set()
+    for f in files:
+        words = util.get_words_in_file(f)
+        #print(set(words))
+        ret = ret.union(set(words))
+        #print(ret)
+    return ret
+
+def get_estimates(unqiue_words, files):
+    ret = dict()
+
+    counter = util.get_counts(files)
+    total_words = 0
+    for word in counter:
+        total_words += counter[word]
+
+    for word in unqiue_words:
+        ret[word] = (counter[word] + 1) / (total_words + len(unqiue_words))
+
+    return ret
 
 def learn_distributions(file_lists_by_category):
     """
@@ -21,8 +44,32 @@ def learn_distributions(file_lists_by_category):
     """
     ### TODO: Write your code here
     
-    
+    spam_files = file_lists_by_category[0]
+    ham_files = file_lists_by_category[1]
+
+    spam_unique_words = get_all_unique_words(spam_files)
+    ham_unique_words = get_all_unique_words(ham_files)
+    unqiue_words = spam_unique_words.union(ham_unique_words)
+
+    p_d_estimates = get_estimates(unqiue_words, spam_files)
+    q_d_estimates = get_estimates(unqiue_words, ham_files)
+
+    probabilities_by_category = (p_d_estimates, q_d_estimates)
     return probabilities_by_category
+
+def get_log_pxy(probabilities_by_category, y, words):
+    #sadly y = 0 is p_d's and y = 1 is q_d's
+    category = probabilities_by_category[y]
+
+    ret = 1
+    for word in category:
+        #print(ret)
+        if word in words:
+            ret += np.log(category[word])
+        else:
+            ret += np.log((1-category[word]))
+
+    return ret
 
 def classify_new_email(filename,probabilities_by_category,prior_by_category):
     """
@@ -45,7 +92,19 @@ def classify_new_email(filename,probabilities_by_category,prior_by_category):
     representing the log posterior probabilities
     """
     ### TODO: Write your code here
-    
+    prior_0 = prior_by_category[0]
+    prior_1 = prior_by_category[1]
+
+    words = util.get_words_in_file(filename)
+    unique_words = set(words)
+
+    p_xy0 = get_log_pxy(probabilities_by_category, 0, words) + np.log(prior_0)
+    p_xy1 = get_log_pxy(probabilities_by_category, 1, words) + np.log(prior_1)
+
+    #print(p_xy0, p_xy1)
+    #p_xy0 contains p_d, p_xy1 contains q_d therefore we need to swap
+    res = 'spam' if p_xy0 > p_xy1 else 'ham'
+    classify_result = (res, (p_xy0, p_xy1))
 
     return classify_result
 
@@ -98,6 +157,8 @@ if __name__ == '__main__':
     # totals are obtained by summing across guessed labels
     totals = np.sum(performance_measures, 1)
     print(template % (correct[0],totals[0],correct[1],totals[1]))
+    print(performance_measures[0,1])
+    print(performance_measures[1,0])
     
     
     ### TODO: Write your code here to modify the decision rule such that
