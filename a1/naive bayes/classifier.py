@@ -61,7 +61,7 @@ def get_log_pxy(probabilities_by_category, y, words):
     #sadly y = 0 is p_d's and y = 1 is q_d's
     category = probabilities_by_category[y]
 
-    ret = 1
+    ret = 0
     for word in category:
         #print(ret)
         if word in words:

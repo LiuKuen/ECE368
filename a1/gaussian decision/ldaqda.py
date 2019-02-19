@@ -23,20 +23,28 @@ def discrimAnalysis(x, y):
     ### TODO: Write your code here
     x_m = x[np.where(y == 1)[0]]
     x_f = x[np.where(y == 2)[0]]
+    # print(np.count_nonzero(y == 1))
+    # print(np.count_nonzero(y == 2))
+    # print(np.where(y == 1)[0].shape)
+    # print(np.where(y == 2)[0].shape)
 
     mu = np.mean(x, axis=0)
     mu_male = np.mean(x_m, axis=0)
     mu_female = np.mean(x_f, axis=0)
 
     N = x.shape[0]
-    N_male = x.shape[0]
-    N_female = x.shape[0]
-
+    N_male = x_m.shape[0]
+    #print(N_male)
+    N_female = x_f.shape[0]
+    #print(N_female)
+    #print(np.transpose(x_m - mu_male))
+    #print((x_m - mu_male))
+    #print(np.transpose(x_m - mu_male)@(x_m - mu_male))
     cov = np.transpose(x - mu)@(x - mu)*(1/N)
     cov_male = np.transpose(x_m - mu_male)@(x_m - mu_male)*(1/N_male)
     cov_female = np.transpose(x_f - mu_female)@(x_f - mu_female)*(1/N_female)
 
-    #print(x.shape, mu, mu_male, mu_female,cov,cov_male,cov_female)
+    #print(mu_male, mu_female,cov,cov_male,cov_female)
     return (mu_male,mu_female,cov,cov_male,cov_female)
     
 
@@ -48,10 +56,18 @@ def get_lda(mu, cov, x):
 def get_qda(mu, cov, x):
     cov_inv = np.linalg.inv(cov)
     cov_mag = np.linalg.norm(cov)**(1/2)
+    #print(cov_mag)
 
     y = (x-mu)
-    #y_t = np.transpose(y) 
-    return -(1/2)*np.sum(y@cov_inv*y, axis=1) - np.log(cov_mag) + np.log(0.5)
+    #y_t = np.transpose(y)
+    #print(mu)
+    #print(x)
+    #print(y)
+    #print(cov_inv)
+    #print((y@cov_inv))
+    #print((y@cov_inv)*y)
+    #return get_lda(mu, cov, x) - (1/2)*np.sum((x@cov_inv)*x, axis = 1) - np.log(cov_mag)
+    return -1*(1/2)*np.sum((y@cov_inv)*y, axis=1) - np.log(cov_mag) + np.log(0.5)
 
 def misRate(mu_male,mu_female,cov,cov_male,cov_female,x,y):
     """
@@ -75,15 +91,18 @@ def misRate(mu_male,mu_female,cov,cov_male,cov_female,x,y):
     lda_females = get_lda(mu_female, cov, x)
     c_lda_predict = (lda_males > lda_females) == (y == 1)
     #print(c_lda_predict)
-
+    #print(cov_male)
+    #print(cov_female)
     qda_males = get_qda(mu_male, cov_male, x)
     qda_females = get_qda(mu_female, cov_female, x)
+    # print((qda_males > qda_females))
+    # print((y == 1))
     c_qda_predict = (qda_males > qda_females) == (y == 1)
-    #print(c_qda_predict)
+    print(c_qda_predict)
 
     mis_lda = (N - np.count_nonzero(c_lda_predict))/N
     mis_qda = (N - np.count_nonzero(c_qda_predict))/N
-    #print(mis_lda, mis_qda)
+    print(mis_lda, mis_qda)
     return (mis_lda, mis_qda)
 
 
