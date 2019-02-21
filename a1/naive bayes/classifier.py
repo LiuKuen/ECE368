@@ -1,6 +1,6 @@
 import os.path
 import numpy as np
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import util
 import collections
 
@@ -15,14 +15,14 @@ def get_all_unique_words(files):
 
 def get_estimates(unqiue_words, files):
     ret = dict()
-
+    num_files = len(files)
     counter = util.get_counts(files)
-    total_words = 0
-    for word in counter:
-        total_words += counter[word]
+    # total_words = 0
+    # for word in counter:
+    #     total_words += counter[word]
 
     for word in unqiue_words:
-        ret[word] = (counter[word] + 1) / (total_words + len(unqiue_words))
+        ret[word] = (counter[word] + 1) / (num_files + 2)
 
     return ret
 
@@ -55,6 +55,7 @@ def learn_distributions(file_lists_by_category):
     q_d_estimates = get_estimates(unqiue_words, ham_files)
 
     probabilities_by_category = (p_d_estimates, q_d_estimates)
+
     return probabilities_by_category
 
 def get_log_pxy(probabilities_by_category, y, words):
@@ -103,7 +104,7 @@ def classify_new_email(filename,probabilities_by_category,prior_by_category):
 
     #print(p_xy0, p_xy1)
     #p_xy0 contains p_d, p_xy1 contains q_d therefore we need to swap
-    res = 'spam' if p_xy0 > p_xy1 else 'ham'
+    res = 'spam' if p_xy0-p_xy1 > 0 else 'ham'
     classify_result = (res, (p_xy0, p_xy1))
 
     return classify_result
@@ -122,34 +123,39 @@ if __name__ == '__main__':
         
     # Learn the distributions    
     probabilities_by_category = learn_distributions(file_lists)
-    
     # prior class distribution
-    priors_by_category = [0.5, 0.5]
-    
+    priors_by_category = [0.5,0.5]
+
     # Store the classification results
     performance_measures = np.zeros([2,2])
-    # explanation of performance_measures:
-    # columns and rows are indexed by 0 = 'spam' and 1 = 'ham'
-    # rows correspond to true label, columns correspond to guessed label
-    # to be more clear, performance_measures = [[p1 p2]
-    #                                           [p3 p4]]
-    # p1 = Number of emails whose true label is 'spam' and classified as 'spam' 
-    # p2 = Number of emails whose true label is 'spam' and classified as 'ham' 
-    # p3 = Number of emails whose true label is 'ham' and classified as 'spam' 
-    # p4 = Number of emails whose true label is 'ham' and classified as 'ham' 
 
-    # Classify emails from testing set and measure the performance
+    log_posterior_list = []
+    true_labels = []
+
     for filename in (util.get_files_in_folder(test_folder)):
         # Classify
-        label,log_posterior = classify_new_email(filename,
+        label, log_posterior = classify_new_email(filename,
                                                  probabilities_by_category,
                                                  priors_by_category)
+        log_posterior_list.append(log_posterior)
         
         # Measure performance (the filename indicates the true label)
+        # explanation of performance_measures:
+        # columns and rows are indexed by 0 = 'spam' and 1 = 'ham'
+        # rows correspond to true label, columns correspond to guessed label
+        # to be more clear, performance_measures = [[p1 p2]
+        #                                           [p3 p4]]
+        # p1 = Number of emails whose true label is 'spam' and classified as 'spam' 
+        # p2 = Number of emails whose true label is 'spam' and classified as 'ham' 
+        # p3 = Number of emails whose true label is 'ham' and classified as 'spam' 
+        # p4 = Number of emails whose true label is 'ham' and classified as 'ham' 
+        # Classify emails from testing set and measure the performance
         base = os.path.basename(filename)
         true_index = ('ham' in base) 
         guessed_index = (label == 'ham')
         performance_measures[int(true_index), int(guessed_index)] += 1
+
+        true_labels.append(true_index)
 
     template="You correctly classified %d out of %d spam emails, and %d out of %d ham emails."
     # Correct counts are on the diagonal
@@ -157,8 +163,32 @@ if __name__ == '__main__':
     # totals are obtained by summing across guessed labels
     totals = np.sum(performance_measures, 1)
     print(template % (correct[0],totals[0],correct[1],totals[1]))
-    print(performance_measures[0,1])
-    print(performance_measures[1,0])
+
+    type1_errors = []
+    type2_errors = []
+    #print(log_posterior_list)
+    for i in [-400, -300, -200, -100, -10, -1, -0.1, 0, 0.1, 1, 10, 100, 200, 300, 400]:
+        type1_error = 0
+        type2_error = 0
+        for index in range(len(log_posterior_list)):
+            p, q = log_posterior_list[index]
+            class_val = p-q > i
+            if class_val == True and true_labels[index] == True:
+                type1_error += 1
+            if class_val == False and true_labels[index] == False:
+                type2_error += 1
+        type1_errors.append(type1_error)
+        type2_errors.append(type2_error)
+
+    #print(type1_errors)
+    #print(type2_errors)
+    plt.figure(0)
+    plt.ylabel("Type2 errors")
+    plt.xlabel("Type1 errors")
+    plt.plot(type1_errors, type2_errors, '-r', label="Type1 vs Type2 errors")
+    plt.show()
+    # print(performance_measures[0,1])
+    # print(performance_measures[1,0])
     
     
     ### TODO: Write your code here to modify the decision rule such that

@@ -1,5 +1,5 @@
 import numpy as np
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import util
 
 def discrimAnalysis(x, y):
@@ -23,10 +23,6 @@ def discrimAnalysis(x, y):
     ### TODO: Write your code here
     x_m = x[np.where(y == 1)[0]]
     x_f = x[np.where(y == 2)[0]]
-    # print(np.count_nonzero(y == 1))
-    # print(np.count_nonzero(y == 2))
-    # print(np.where(y == 1)[0].shape)
-    # print(np.where(y == 2)[0].shape)
 
     mu = np.mean(x, axis=0)
     mu_male = np.mean(x_m, axis=0)
@@ -34,12 +30,8 @@ def discrimAnalysis(x, y):
 
     N = x.shape[0]
     N_male = x_m.shape[0]
-    #print(N_male)
     N_female = x_f.shape[0]
-    #print(N_female)
-    #print(np.transpose(x_m - mu_male))
-    #print((x_m - mu_male))
-    #print(np.transpose(x_m - mu_male)@(x_m - mu_male))
+
     cov = np.transpose(x - mu)@(x - mu)*(1/N)
     cov_male = np.transpose(x_m - mu_male)@(x_m - mu_male)*(1/N_male)
     cov_female = np.transpose(x_f - mu_female)@(x_f - mu_female)*(1/N_female)
@@ -55,18 +47,9 @@ def get_lda(mu, cov, x):
 
 def get_qda(mu, cov, x):
     cov_inv = np.linalg.inv(cov)
-    cov_mag = np.linalg.norm(cov)**(1/2)
-    #print(cov_mag)
+    cov_mag = np.sqrt(np.linalg.det(cov))
 
     y = (x-mu)
-    #y_t = np.transpose(y)
-    #print(mu)
-    #print(x)
-    #print(y)
-    #print(cov_inv)
-    #print((y@cov_inv))
-    #print((y@cov_inv)*y)
-    #return get_lda(mu, cov, x) - (1/2)*np.sum((x@cov_inv)*x, axis = 1) - np.log(cov_mag)
     return -1*(1/2)*np.sum((y@cov_inv)*y, axis=1) - np.log(cov_mag) + np.log(0.5)
 
 def misRate(mu_male,mu_female,cov,cov_male,cov_female,x,y):
@@ -90,21 +73,23 @@ def misRate(mu_male,mu_female,cov,cov_male,cov_female,x,y):
     lda_males = get_lda(mu_male, cov, x)
     lda_females = get_lda(mu_female, cov, x)
     c_lda_predict = (lda_males > lda_females) == (y == 1)
-    #print(c_lda_predict)
-    #print(cov_male)
-    #print(cov_female)
+
     qda_males = get_qda(mu_male, cov_male, x)
     qda_females = get_qda(mu_female, cov_female, x)
-    # print((qda_males > qda_females))
-    # print((y == 1))
+
     c_qda_predict = (qda_males > qda_females) == (y == 1)
-    print(c_qda_predict)
 
     mis_lda = (N - np.count_nonzero(c_lda_predict))/N
     mis_qda = (N - np.count_nonzero(c_qda_predict))/N
-    print(mis_lda, mis_qda)
+
     return (mis_lda, mis_qda)
 
+def create_mesh_vals(x, y):
+    ret = []
+    for i in x:
+        for j in y:
+            ret.append([j, i])
+    return np.array(ret)
 
 if __name__ == '__main__':
     
@@ -114,13 +99,52 @@ if __name__ == '__main__':
     
     # parameter estimation and visualization in LDA/QDA
     mu_male,mu_female,cov,cov_male,cov_female = discrimAnalysis(x_train,y_train)
-    
+
+    #init values for plot
+    x = np.arange(50, 81)
+    y = np.arange(80, 281)
+    xx, yy = np.meshgrid(x, y)
+    z = create_mesh_vals(y, x)
+
+    #scatter plot
+    males = x_train[np.where(y_train == 1)[0]]
+    females = x_train[np.where(y_train == 2)[0]]
+
+    #gaussian
+    g_lda_m = util.density_Gaussian(mu_male, cov, z).reshape((201, 31))
+    g_lda_f = util.density_Gaussian(mu_female, cov, z).reshape((201, 31))
+
+    g_qda_m = util.density_Gaussian(mu_male, cov_male, z).reshape((201, 31))
+    g_qda_f = util.density_Gaussian(mu_female, cov_female, z).reshape((201, 31))
+
+    #decision boundry
+    lda_m = get_lda(mu_male, cov, z)
+    lda_f = get_lda(mu_female, cov, z)
+    d_lda = (lda_m - lda_f).reshape((201, 31))
+
+    qda_m = get_qda(mu_male, cov_male, z)
+    qda_f = get_qda(mu_female, cov_female, z)
+    d_qda = (qda_m - qda_f).reshape((201, 31))
+
+    #plotting
+    plt.figure(0)
+    plt.xlabel("weight (kg)")
+    plt.ylabel("height (cm)")
+    cp = plt.scatter(males[:, 0], males[:, 1], color="blue")
+    cp = plt.scatter(females[:, 0], females[:, 1], color="red")
+    cp = plt.contour(xx, yy, g_lda_m)
+    cp = plt.contour(xx, yy, g_lda_f)
+    cp = plt.contour(xx, yy, d_lda, 0)
+
+    plt.figure(1)
+    plt.xlabel("weight (kg)")
+    plt.ylabel("height (cm)")
+    cp = plt.scatter(males[:, 0], males[:, 1], color="blue")
+    cp = plt.scatter(females[:, 0], females[:, 1], color="red")
+    cp = plt.contour(xx, yy, g_qda_m)
+    cp = plt.contour(xx, yy, g_qda_f)
+    cp = plt.contour(xx, yy, d_qda, 0)
+    plt.show()
+
     # misclassification rate computation
     mis_LDA,mis_QDA = misRate(mu_male,mu_female,cov,cov_male,cov_female,x_test,y_test)
-    
-
-    
-    
-    
-
-    
