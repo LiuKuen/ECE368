@@ -128,8 +128,8 @@ if __name__ == '__main__':
 
     #plotting
     plt.figure(0)
-    plt.xlabel("weight (kg)")
-    plt.ylabel("height (cm)")
+    plt.xlabel("height (cm)")
+    plt.ylabel("weight (kg)")
     cp = plt.scatter(males[:, 0], males[:, 1], color="blue")
     cp = plt.scatter(females[:, 0], females[:, 1], color="red")
     cp = plt.contour(xx, yy, g_lda_m)
@@ -137,8 +137,8 @@ if __name__ == '__main__':
     cp = plt.contour(xx, yy, d_lda, 0)
 
     plt.figure(1)
-    plt.xlabel("weight (kg)")
-    plt.ylabel("height (cm)")
+    plt.xlabel("height (cm)")
+    plt.ylabel("weight (kg)")
     cp = plt.scatter(males[:, 0], males[:, 1], color="blue")
     cp = plt.scatter(females[:, 0], females[:, 1], color="red")
     cp = plt.contour(xx, yy, g_qda_m)
