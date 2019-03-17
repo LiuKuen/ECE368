@@ -2,6 +2,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import util
 
+def create_mesh_vals(x, y):
+    ret = []
+    for i in x:
+        for j in y:
+            ret.append([j, i])
+    return np.array(ret)
+
 def priorDistribution(beta):
     """
     Plot the contours of the prior distribution p(a)
@@ -14,7 +21,21 @@ def priorDistribution(beta):
     -----
     """
     ### TODO: Write your code here
+    x = np.arange(-1, 1)
+    y = np.arange(-1, 1)
+    xx, yy = np.meshgrid(x, y)
+    z = create_mesh_vals(y, x)
 
+    mu = np.array([0,0])
+    cov = np.array([[beta, 0],[0, beta]])
+
+    pa = util.density_Gaussian(mu, cov, z).reshape((2, 2))
+
+
+    plt.figure(0)
+    plt.xlabel("a0")
+    plt.ylabel("a1")
+    cp = plt.contour(xx, yy, pa)
     
     return 
     
@@ -86,6 +107,7 @@ if __name__ == '__main__':
     
     # distribution of the prediction
     predictionDistribution(x_test,beta,sigma2,mu,Cov,x,z)
+    plt.show()
     
 
    
